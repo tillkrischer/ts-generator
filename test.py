@@ -3,6 +3,10 @@ from hmmlearn import hmm
 from mySSA import mySSA
 import pandas as pd
 
+"""
+Existing implementations for some functions for comparision
+"""
+
 
 def log_likelihood_control(X, k, means, cov):
     A = X.reshape(-1, 1)
