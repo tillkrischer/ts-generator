@@ -391,7 +391,8 @@ def format_output(ts, time_inc, output_file):
 
 def display_timeseries(ts, time_inc):
     n = len(ts)
-    x = range(0, n * time_inc, time_inc)
+    # x = range(0, n * time_inc, time_inc)
+    x = [time_inc * x for x in range(n)]
     plt.plot(x, ts)
     plt.show()
 
