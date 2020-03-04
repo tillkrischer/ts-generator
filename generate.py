@@ -442,12 +442,12 @@ def handle_args():
         '--hmm-trans-prop', type=float, metavar="t", nargs="+", help='transition probabilitis len=k**2')
 
     # ssa related arguments
-    hmmlearnargs = parser.add_argument_group("ssa")
-    hmmlearnargs.add_argument(
+    ssaargs = parser.add_argument_group("ssa")
+    ssaargs.add_argument(
         '--ssa-original', metavar='data.csv', help='base time series')
-    hmmlearnargs.add_argument(
+    ssaargs.add_argument(
         '--ssa-window', type=int, metavar='k', help='should be a multiple of the seasonality')
-    hmmlearnargs.add_argument(
+    ssaargs.add_argument(
         '--ssa-components', type=int, metavar='c', help='# of components used in reconstruction')
 
     args = parser.parse_args()
