@@ -359,7 +359,6 @@ def handle_ssa(orig, window, components, l):
     R = compute_R(eigenv, components)
 
     additional_samples = max(0, l-n)
-    print(additional_samples)
     fc = forecast(x_tilde, R, components, additional_samples)
     return fc[:l]
 
