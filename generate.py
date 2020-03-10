@@ -2,7 +2,6 @@
 
 import argparse
 import numpy as np
-import scipy
 import sklearn.cluster
 import matplotlib.pyplot as plt
 
@@ -37,11 +36,21 @@ def logsumexp(ns):
 
 
 def lognormalize_gamma(g):
-    # TODO: scipy
-    a = scipy.special.logsumexp(g, axis=1)
-    # a = np.logaddexp.reduce(x)
+    l = g.shape[0]
+    a = np.zeros(l)
+
+    for i in range(l):
+        a[i] = logsumexp(g[i])
+
     g_norm = g - a.reshape(-1, 1)
     return np.exp(g_norm)
+
+
+def log_normal_pdf(x, mu, sigma):
+    ssq = sigma**2
+    dsq = (x - mu)**2
+    lp = - 0.5 * np.log(ssq * 2 * np.pi) - 0.5 * dsq / ssq
+    return lp
 
 
 def log_likelihood(X, k, means, cov):
@@ -52,9 +61,7 @@ def log_likelihood(X, k, means, cov):
     ll = np.zeros((len(X), k))
     for i in range(len(X)):
         for j in range(k):
-            # TODO: scipy implement myself ?
-            likel = scipy.stats.norm.pdf(X[i], means[j], np.sqrt(cov[j]))
-            ll[i, j] = np.log(likel)
+            ll[i, j] = log_normal_pdf(X[i], means[j], np.sqrt(cov[j]))
 
     return ll
 
