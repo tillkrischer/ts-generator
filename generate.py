@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 
 
 def parseCSV(filename):
+    """
+    read the specified file, 
+    split along commas and cast to float
+    return numpy array
+    """
     with open(filename) as f:
         datafile = f.read()
         lines = datafile.split("\n")
@@ -27,7 +32,12 @@ def parseCSV(filename):
 
 
 def logsumexp(ns):
+    """
+    log sum exp trick 
+    to avoid underflow
+    """
     max = np.max(ns)
+    # negative inf case
     if np.isneginf(max):
         return float("-inf")
     ds = ns - max
@@ -36,6 +46,11 @@ def logsumexp(ns):
 
 
 def lognormalize_gamma(g):
+    """
+    normalize gamma along the rows
+    since in log space we subtract instead of divide
+    so that the rows sum up to 0 (instead of 1 in regular space)
+    """
     l = g.shape[0]
     a = np.zeros(l)
 
@@ -47,6 +62,9 @@ def lognormalize_gamma(g):
 
 
 def log_normal_pdf(x, mu, sigmasq):
+    """
+    compute log of normal distribution pdf
+    """
     dsq = (x - mu)**2
     lp = - 0.5 * np.log(sigmasq * 2 * np.pi) - 0.5 * dsq / sigmasq
     return lp
@@ -55,7 +73,6 @@ def log_normal_pdf(x, mu, sigmasq):
 def log_likelihood(X, k, means, cov):
     """
     compute log likelihood for every datapoint of every possible state
-    TODO: vectorize ?
     """
     ll = np.zeros((len(X), k))
     for i in range(len(X)):
@@ -68,9 +85,9 @@ def log_likelihood(X, k, means, cov):
 def forward(loglikelihood, start, transition):
     """
     perform forward pass to compute alpha
-    TODO: matrix faster ?
     """
     n, k = loglikelihood.shape
+    # taking the log of 0 gives -inf, which is fine in this case
     with np.errstate(divide="ignore"):
         logstart = np.log(start)
         logtrans = np.log(transition)
@@ -84,8 +101,6 @@ def forward(loglikelihood, start, transition):
         for j in range(k):
             for i in range(k):
                 temp[i] = alpha[t-1, i] + logtrans[i, j]
-            # pylint: disable=no-member
-            # alpha[t, j] = np.logaddexp.reduce(temp) + loglikelihood[t, j]
             alpha[t, j] = logsumexp(temp) + loglikelihood[t, j]
     return alpha
 
@@ -95,6 +110,7 @@ def backward(loglikelihood, transition):
     perform backward pass to compute beta
     """
     n, k = loglikelihood.shape
+    # taking the log of 0 gives -inf, which is fine in this case
     with np.errstate(divide="ignore"):
         logtrans = np.log(transition)
     beta = np.zeros((n, k))
@@ -112,6 +128,9 @@ def backward(loglikelihood, transition):
 
 
 def compute_trans(a, b, ll, transition):
+    """
+    computes log of xi
+    """
     n, k = ll.shape
     with np.errstate(divide="ignore"):
         logtrans = np.log(transition)
@@ -143,6 +162,10 @@ def normalize(a, axis=None):
 
 
 def update_params(sumgamma, xgammasum, xgammasumsquared, start, trans):
+    """
+    M-step
+    copute new parameters from computed expectations
+    """
     norm_trans = normalize(trans, axis=1)
     norm_start = normalize(start)
 
@@ -158,6 +181,9 @@ def update_params(sumgamma, xgammasum, xgammasumsquared, start, trans):
 
 
 def init(components, X):
+    """
+    initialize HMM parameters 
+    """
     # join sequences if necessary
     if X.ndim == 2:
         X = np.concatenate(X)
@@ -169,7 +195,7 @@ def init(components, X):
     # initial covariance
     covar = np.cov(X)
     cov = np.tile(covar, components)
-    # init start probablity
+    # init start probability
     startprop = np.tile(1/components, components)
     # init transition matrix
     transmat = np.tile(1/components, components **
@@ -178,6 +204,10 @@ def init(components, X):
 
 
 def fit(A, k, it, verbose):
+    """
+    fit a HMM to training data A
+    returns learned parameters
+    """
     means, cov, startprop, transmat = init(k, A)
 
     for i in range(it):
@@ -221,6 +251,9 @@ def fit(A, k, it, verbose):
 
 
 def generate_hmm(startprop, transmat, means, cov, l):
+    """
+    generate time series from HMM parameters
+    """
     k = startprop.size
     start = np.random.choice(range(k), p=startprop)
     mu = means[start]
@@ -240,6 +273,9 @@ def generate_hmm(startprop, transmat, means, cov, l):
 
 
 def embed(X, k):
+    """
+    embed time series X with a windows size of k
+    """
     l = X.size
     C = np.zeros((k, l - k + 1))
     for i in range(k):
@@ -249,6 +285,10 @@ def embed(X, k):
 
 
 def decompose(X):
+    """
+    decompose matrix X into eigenvectors
+    and corresponding X components
+    """
     rank = np.linalg.matrix_rank(X)
     Xsq = X @ X.T
     U, S, _ = np.linalg.svd(Xsq)
@@ -268,6 +308,10 @@ def decompose(X):
 
 
 def diagonal_avg(M):
+    """
+    avarage diagonals to turn matrix form of component
+    back into time series
+    """
     k, l = M.shape
     res = []
     for i in range(l + k - 1):
@@ -284,6 +328,10 @@ def diagonal_avg(M):
 
 
 def compute_R(eigenv, ncomponents):
+    """
+    compute recurrence matrix X from eigenvectors
+    uses first ncomonents eigenvectors
+    """
     vsq = 0
     R = np.zeros(eigenv[0].size-1)
     for i in range(ncomponents):
@@ -296,6 +344,10 @@ def compute_R(eigenv, ncomponents):
 
 
 def reconstruct(Xcomp, ncomponents):
+    """
+    combine first ncomponents components to 
+    reconstruct the time series
+    """
     Xfull = np.zeros(Xcomp[0].shape)
     for i in range(ncomponents):
         X = Xcomp[i]
@@ -306,6 +358,10 @@ def reconstruct(Xcomp, ncomponents):
 
 
 def forecast(x_tilde, R, ncomponents, steps):
+    """
+    forecast additional steps of the time series
+    using the recurrence method and matrix R
+    """
     n = len(x_tilde)
     d = R.size
     new_series = x_tilde[:]
@@ -315,14 +371,22 @@ def forecast(x_tilde, R, ncomponents, steps):
     return new_series
 
 
-def handle_hmm_learn(trainig, k, it, verbose, l):
-    X = parseCSV(trainig)
+def handle_hmm_learn(training, k, it, verbose, l):
+    """
+    learn parameters using training data
+    then generate time series according to parameters
+    """
+    X = parseCSV(training)
     startprop, transmat, means, cov = fit(X, k, it, verbose)
     ts = generate_hmm(startprop, transmat, means, cov, l)
     return ts
 
 
 def handle_hmm_param_simple(means, l):
+    """
+    pick default values for other parameters given means
+    then generate time series according to parameters
+    """
     # means are given
     meansnp = np.array(means)
     k = meansnp.size
@@ -343,6 +407,9 @@ def handle_hmm_param_simple(means, l):
 
 
 def handle_hmm_param(m, c, s, t, l):
+    """
+    generate time series according to HMM parameters
+    """
     k = len(m)
     means = np.array(m)
     cov = np.array(c)
@@ -354,6 +421,12 @@ def handle_hmm_param(m, c, s, t, l):
 
 
 def handle_ssa(orig, window, components, l):
+    """
+    perform SSA on given time series
+    then forecast up to required length 
+    return combined reconstruction and forecast as
+    new time series
+    """
     X = parseCSV(orig).reshape(-1)
     n = X.size
 
@@ -370,6 +443,10 @@ def handle_ssa(orig, window, components, l):
 
 
 def scale_time_series(ts, low, high):
+    """
+    scale result so that new lowest value is low
+    and highest is high
+    """
     tsmin = min(ts)
     tsdiff = max(ts) - tsmin
     newdiff = high - low
@@ -381,6 +458,10 @@ def scale_time_series(ts, low, high):
 
 
 def format_output(ts, time_inc, output_file):
+    """
+    write generated time series in csv form either to file
+    or stdout
+    """
     output = "Time, Value"
     output += "\n"
     for i, v in enumerate(ts):
@@ -395,6 +476,10 @@ def format_output(ts, time_inc, output_file):
 
 
 def display_timeseries(ts, time_inc):
+    """
+    display generated timeseries using
+    matplotlib
+    """
     n = len(ts)
     # x = range(0, n * time_inc, time_inc)
     x = [time_inc * x for x in range(n)]
@@ -403,6 +488,10 @@ def display_timeseries(ts, time_inc):
 
 
 def handle_args():
+    """
+    main function
+    handle all cmd parameters
+    """
     parser = argparse.ArgumentParser(description='Generate Time Series')
     # general arguments
     generalargs = parser.add_argument_group("general")
