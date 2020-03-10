@@ -46,10 +46,9 @@ def lognormalize_gamma(g):
     return np.exp(g_norm)
 
 
-def log_normal_pdf(x, mu, sigma):
-    ssq = sigma**2
+def log_normal_pdf(x, mu, sigmasq):
     dsq = (x - mu)**2
-    lp = - 0.5 * np.log(ssq * 2 * np.pi) - 0.5 * dsq / ssq
+    lp = - 0.5 * np.log(sigmasq * 2 * np.pi) - 0.5 * dsq / sigmasq
     return lp
 
 
@@ -61,7 +60,7 @@ def log_likelihood(X, k, means, cov):
     ll = np.zeros((len(X), k))
     for i in range(len(X)):
         for j in range(k):
-            ll[i, j] = log_normal_pdf(X[i], means[j], np.sqrt(cov[j]))
+            ll[i, j] = log_normal_pdf(X[i], means[j], cov[j])
 
     return ll
 
